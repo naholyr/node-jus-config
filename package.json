@@ -1,0 +1,22 @@
+{
+  "author": "Nicolas Chambrier <naholyr@gmail.com> (http://naholyr.fr)",
+  "name": "jus-config",
+  "description": "Configuration handler, accepts multiple file formats, and overriding over multiple directories and filenames. Main usage: require('jus-config')(configNames, dirNames, callback).",
+  "version": "0.0.1",
+  "repository": {
+    "url": ""
+  },
+  "main": "index.js",
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {
+    "yaml": "*",
+    "iniparser": "*",
+    "async": "*"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "node test"
+  }
+}
