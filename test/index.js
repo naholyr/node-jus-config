@@ -44,10 +44,22 @@ add_test_load('load from multiple directories', ['value.json', ['config', 'confi
 });
 
 // Mix all
-add_test_load('load and override from multiple directories with multiple formats', [['format.json', 'format.yml', 'format.ini', 'format.js'], ['config', 'config/override']], function(err, config) {
+add_test_load('load and override from multiple directories with multiple formats 1', [['format.json', 'format.yml', 'format.ini', 'format.js'], ['config', 'config/override']], function(err, config) {
   assert.ifError(err);
   assert.deepEqual(config, {
     "format": "js",
+    "json": true,
+    "yml": true,
+    "ini": "true",
+    "js": true
+  });
+});
+
+// Mix all, with implicit extension
+add_test_load('load and override from multiple directories with multiple formats 2', ['format', ['config', 'config/override']], function(err, config) {
+  assert.ifError(err);
+  assert.deepEqual(config, {
+    "format": "js", // The "js" parser should always have highest priority
     "json": true,
     "yml": true,
     "ini": "true",

@@ -57,7 +57,7 @@ function merge(to, from, recursive) {
 function loadFile(file, config, callback) {
   if (exports.debug) util.debug('Loading configuration file: ' + file);
   var ext = path.extname(file);
-  if (ext.charAt(0) != '.') {
+  if (ext.charAt(0) == '') {
     return callback(new Error('Invalid file "' + file + '": extension required'));
   }
   var parse = parsers[ext.toLowerCase().substring(1)];
@@ -123,13 +123,23 @@ function loadFilesFromDirs(files, dirs, callback) {
 
   // All files to be checked
   var allFiles = [];
+  function addFile(file) {
+    if (path.extname(file) == '') {
+      if (exports.debug) util.debug('No extension for ' + file + ', try all known extensions');
+      Object.keys(parsers).forEach(function(knownExtension) {
+        addFile(file + '.' + knownExtension);
+      });
+    } else {
+      allFiles.push(file);
+    }
+  }
   files.forEach(function(file) {
     if (file.charAt(0) == '/' || file.charAt(0) == '\\') {
       // Absolute path: use it as-is
-      allFiles.push(file);
+      addFile(file);
     } else {
       dirs.forEach(function(dir) {
-        allFiles.push(path.join(dir, file));
+        addFile(path.join(dir, file));
       });
     }
   });
@@ -153,9 +163,9 @@ function loadFilesFromDirs(files, dirs, callback) {
 
 // Initialize parsers
 
-registerParser('json',          createParser(JSON.parse));
-registerParser(['yml', 'yaml'], createParser(yaml.eval));
 registerParser('ini',           createParser(ini.parseString));
+registerParser(['yml', 'yaml'], createParser(yaml.eval));
+registerParser('json',          createParser(JSON.parse));
 registerParser('js',            createParser(function(s) { return vm.runInThisContext('('+s+')') }));
 
 
