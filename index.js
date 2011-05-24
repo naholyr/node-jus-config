@@ -12,6 +12,7 @@ const path = require('path')
 // Internal variables
 
 var parsers = {};
+var enabledParsers = [];
 
 
 // Internal API
@@ -28,15 +29,50 @@ function createParser(parse) {
   };
 }
 
-function registerParser(extension, parser) {
+function registerParser(extension, parser, enable) {
   if (typeof parser != 'function') {
     throw new Error('Invalid type for parser: function expected');
   }
   if (extension instanceof Array) {
-    for (var i=0; i<extension.length; i++) registerParser(extension[i], parser);
+    for (var i=0; i<extension.length; i++) registerParser(extension[i], parser, enable);
   } else {
     parsers[extension.toLowerCase()] = parser;
+    if (enable) enableParser(extension);
   }
+}
+
+function enableParser(extension) {
+  if (isParserEnabled(extension)) {
+    if (exports.debug) util.debug('Parser for "' + extension + '" is already enabled');
+    return false;
+  }
+  if (isParserRegistered(extension)) {
+    enabledParsers.push(extension.toLowerCase());
+    return true;
+  } else {
+    throw new Error('No registered parser for "' + extension + '"');
+  }
+}
+
+function disableParser(extension) {
+  if (!isParserEnabled(extension)) {
+    if (exports.debug) util.debug('Parser for "' + extension + '" is already disabled');
+    return false;
+  }
+  if (isParserRegistered(extension)) {
+    enabledParsers.splice(enabledParsers.indexOf(extension.toLowerCase()), 1);
+    return true;
+  } else {
+    throw new Error('No registered parser for "' + extension + '"');
+  }
+}
+
+function isParserEnabled(extension) {
+  return enabledParsers.indexOf(extension.toLowerCase()) != -1;
+}
+
+function isParserRegistered(extension) {
+  return typeof parsers[extension.toLowerCase()] == 'function';
 }
 
 function isObject(o) {
@@ -54,31 +90,42 @@ function merge(to, from, recursive) {
   }
 }
 
-function loadFile(file, config, callback) {
-  if (exports.debug) util.debug('Loading configuration file: ' + file);
+function parseFile(file, callback) {
   var ext = path.extname(file);
   if (ext.charAt(0) == '') {
     return callback(new Error('Invalid file "' + file + '": extension required'));
   }
-  var parse = parsers[ext.toLowerCase().substring(1)];
-  if (typeof parse != 'function') {
+  ext = ext.substring(1);
+  if (!isParserEnabled(ext)) {
     return callback(new Error('Invalid file "' + file + '": no parser found for extension "' + ext + '"'));
   }
   fs.readFile(file, function(err, content) {
     if (err) {
       return callback(err);
     }
-    parse(content.toString(), function(err, conf) {
-      if (!err) {
-        try {
-          merge(config, conf, true);
-        } catch (e) {
-          err = e;
-        }
+    parseString(content.toString(), ext, callback);
+  });
+}
+
+function parseString(string, extension, callback) {
+  if (!isParserEnabled(extension)) {
+    return callback(new Error('No enabled parser for "' + extension + '"'));
+  }
+  parsers[extension.toLowerCase()](string, callback);
+}
+
+function loadFile(file, config, callback) {
+  if (exports.debug) util.debug('Loading configuration file: ' + file);
+  parseFile(file, function(err, conf) {
+    if (!err) {
+      try {
+        merge(config, conf, true);
+      } catch (e) {
+        err = e;
       }
-      if (err instanceof Error) err.message = err.message + ' in "' + file + '"';
-      callback(err);
-    });
+    }
+    if (err instanceof Error) err.message = err.message + ' in "' + file + '"';
+    callback(err);
   });
 }
 
@@ -125,9 +172,13 @@ function loadFilesFromDirs(files, dirs, callback) {
   var allFiles = [];
   function addFile(file) {
     if (path.extname(file) == '') {
-      if (exports.debug) util.debug('No extension for ' + file + ', try all known extensions');
-      Object.keys(parsers).forEach(function(knownExtension) {
-        addFile(file + '.' + knownExtension);
+      if (exports.debug) util.debug('No extension for ' + file + ', try all enabled parsers (first enabled = highest priority)');
+      var guessedFiles = [];
+      enabledParsers.forEach(function(knownExtension) {
+        guessedFiles.unshift(file + '.' + knownExtension);
+      });
+      guessedFiles.forEach(function(f) {
+        addFile(f);
       });
     } else {
       allFiles.push(file);
@@ -168,13 +219,21 @@ registerParser(['yml', 'yaml'], createParser(yaml.eval));
 registerParser('json',          createParser(JSON.parse));
 registerParser('js',            createParser(function(s) { return vm.runInThisContext('('+s+')') }));
 
+enableParser('json'); // This one will always be the first loaded, and therefore the highest priority format
+
 
 // Exposed API
 
 merge(exports, {
   "parser": {
-    "register": registerParser,
-    "create":   createParser
+    "register":    registerParser,
+    "registered":  isParserRegistered,
+    "enable":      enableParser,
+    "disable":     disableParser,
+    "enabled":     isParserEnabled,
+    "create":      createParser,
+    "parseFile":   parseFile,
+    "parseString": parseString
   },
   "load": loadFilesFromDirs,
   "debug": false

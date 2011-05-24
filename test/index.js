@@ -8,6 +8,16 @@ var tests = [], passedTests = 0
 
 // Declare tests
 
+// Enable parsers
+add_test('enable parsers', function(callback) {
+  config.parser.enable('js');
+  config.parser.enable('yml');
+  config.parser.enable('ini');
+  callback();
+}, [], function(err) {
+  assert.ifError(err);
+});
+
 // No file found
 add_test_load('no configuration file found', ['not_found.json'], function(err) {
   assert.ok(err instanceof Error);
@@ -17,7 +27,7 @@ add_test_load('no configuration file found', ['not_found.json'], function(err) {
 // Invalid parser
 add_test_load('invalid file', ['invalid.txt'], function(err) {
   assert.ok(err instanceof Error);
-  assert.ok(err.message.match(/Invalid file ".*?\/config\/invalid.txt": no parser found for extension ".txt"/));
+  assert.ok(err.message.match(/Invalid file ".*?\/config\/invalid.txt": no parser found for extension "txt"/));
 });
 
 // Basic loading
@@ -44,7 +54,7 @@ add_test_load('load from multiple directories', ['value.json', ['config', 'confi
 });
 
 // Mix all
-add_test_load('load and override from multiple directories with multiple formats 1', [['format.json', 'format.yml', 'format.ini', 'format.js'], ['config', 'config/override']], function(err, config) {
+add_test_load('load and override from multiple directories with multiple formats', [['format.json', 'format.yml', 'format.ini', 'format.js'], ['config', 'config/override']], function(err, config) {
   assert.ifError(err);
   assert.deepEqual(config, {
     "format": "js",
@@ -55,15 +65,25 @@ add_test_load('load and override from multiple directories with multiple formats
   });
 });
 
-// Mix all, with implicit extension
-add_test_load('load and override from multiple directories with multiple formats 2', ['format', ['config', 'config/override']], function(err, config) {
+// Test implicit extensions
+add_test_load('load with no extensions provided', ['format'], function(err, config) {
   assert.ifError(err);
   assert.deepEqual(config, {
-    "format": "js", // The "js" parser should always have highest priority
-    "json": true,
+    "format": "json", // The "json" has priority over "yml"
     "yml": true,
+    "json": true,
+  });
+});
+
+// Test implicit extensions, and overriding by folder
+add_test_load('load with no extensions provided', ['format', ['config', 'config/override']], function(err, config) {
+  assert.ifError(err);
+  assert.deepEqual(config, {
+    "format": "js", // The "json" has priority over "yml", but "config/override" overrides "config", and "js" has priority over "ini"
+    "yml": true,
+    "json": true,
     "ini": "true",
-    "js": true
+    "js": true,
   });
 });
 
@@ -78,20 +98,23 @@ process_tests();
 // Internals
 
 // Add some test
-function add_test_load(name, args, asserts) {
+function add_test(name, foo, args, asserts, env) {
   tests.push(function(callback) {
-    args.push(function(err, config) {
+    args.push(function(err) {
       var success = false;
       try {
-        asserts(err, config);
+        asserts.apply(env, arguments);
         success = true;
       } catch (e) {
         console.error('Failed test "' + name + '": ' + (e.message || e));
       }
       callback(undefined, success);
     });
-    config.load.apply(config, args);
+    foo.apply(env, args);
   });
+}
+function add_test_load(name, args, asserts) {
+  add_test(name, config.load, args, asserts, config);
 }
 
 // Process tests
