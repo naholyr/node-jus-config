@@ -2,7 +2,9 @@ const config = require('..')
     , assert = require('assert')
     , async = require('async')
 
-var tests = [], passedTests = 0
+var tests = []
+  , passedTests = 0
+  , doColorize = true
 
 
 
@@ -130,6 +132,21 @@ process_tests();
 
 // Internals
 
+// Colorize
+function log(type, prefix, message) {
+  while (prefix.length < 4) prefix += ' ';
+  prefix = '[' + prefix + '] ';
+  if (doColorize) {
+    if (type == 'error') {
+      prefix = '\x1b[1;31m' + prefix;
+    } else {
+      prefix = '\x1b[1;32m' + prefix;
+    }
+    prefix += '\x1b[0m';
+  }
+  console[type](prefix + message);
+}
+
 // Add some test
 function add_test(name, foo, args, asserts, env) {
   tests.push(function(callback) {
@@ -137,11 +154,10 @@ function add_test(name, foo, args, asserts, env) {
       var success = false;
       try {
         asserts.apply(env, arguments);
-        console.info('\x1b[1;32m[PASS]\x1b[0m ' + name);
+        log('info', 'PASS', name);
         success = true;
       } catch (e) {
-        console.error('\x1b[1;31m[ERR ]\x1b[0m ' + name);
-        console.error('       >>> ' + e.toString().split('\n').join('\n       >>> '));
+        log('error', 'ERR', name + '\n       >>> ' + e.toString().split('\n').join('\n       >>> '));
       }
       callback(undefined, success);
     });
@@ -155,12 +171,14 @@ function add_test_load(name, args, asserts) {
 // Process tests
 function process_tests() {
   process.chdir(__dirname);
+  config.debug(~process.argv.indexOf('--debug'));
+  doColorize = !~process.argv.indexOf('--no-color');
   async.series(tests, function end_tests(err, results) {
     var passed = results.filter(function(v) { return v }).length;
     if (passed != tests.length) {
-      console.error('\x1b[1;31m[FAIL]\x1b[0m Not all tests passed: ' + passed + '/' + tests.length + ' passed');
+      log('error', 'FAIL', 'Not all tests passed: ' + passed + '/' + tests.length + ' passed');
     } else {
-      console.info('\x1b[1;32m[ OK ]\x1b[0m ' + passed + '/' + tests.length + ' tests passed');
+      log('info', ' OK ', passed + '/' + tests.length + ' tests passed');
     }
   });
 }
