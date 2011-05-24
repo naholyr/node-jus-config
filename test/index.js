@@ -76,7 +76,7 @@ add_test_load('load with no extensions provided', ['format'], function(err, conf
 });
 
 // Test implicit extensions, and overriding by folder
-add_test_load('load with no extensions provided', ['format', ['config', 'config/override']], function(err, config) {
+add_test_load('load with no extensions provided on multiple directories', ['format', ['config', 'config/override']], function(err, config) {
   assert.ifError(err);
   assert.deepEqual(config, {
     "format": "js", // The "json" has priority over "yml", but "config/override" overrides "config", and "js" has priority over "ini"
