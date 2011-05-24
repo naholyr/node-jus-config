@@ -104,9 +104,11 @@ function add_test(name, foo, args, asserts, env) {
       var success = false;
       try {
         asserts.apply(env, arguments);
+        console.info('\x1b[1;32m[PASS]\x1b[0m ' + name);
         success = true;
       } catch (e) {
-        console.error('Failed test "' + name + '": ' + (e.message || e));
+        console.error('\x1b[1;31m[ERR ]\x1b[0m ' + name);
+        console.error('       >>> ' + e.toString().split('\n').join('\n       >>> '));
       }
       callback(undefined, success);
     });
@@ -123,9 +125,9 @@ function process_tests() {
   async.series(tests, function end_tests(err, results) {
     var passed = results.filter(function(v) { return v }).length;
     if (passed != tests.length) {
-      console.error('Not all tests passed: ' + passed + '/' + tests.length + ' passed');
+      console.error('\x1b[1;31m[FAIL]\x1b[0m Not all tests passed: ' + passed + '/' + tests.length + ' passed');
     } else {
-      console.info('OK: ' + passed + '/' + tests.length + ' tests passed');
+      console.info('\x1b[1;32m[ OK ]\x1b[0m ' + passed + '/' + tests.length + ' tests passed');
     }
   });
 }
