@@ -16,6 +16,12 @@ add_test('enable parsers', function(callback) {
   callback();
 }, [], function(err) {
   assert.ifError(err);
+  assert.ok(config.parser.enabled('json'));
+  assert.ok(config.parser.enabled('js'));
+  assert.ok(config.parser.enabled('yml'));
+  assert.ok(config.parser.enabled('ini'));
+  assert.ok(!config.parser.enabled('yaml'));
+  assert.ok(!config.parser.enabled('txt'));
 });
 
 // No file found
@@ -27,7 +33,7 @@ add_test_load('no configuration file found', ['not_found.json'], function(err) {
 // Invalid parser
 add_test_load('invalid file', ['invalid.txt'], function(err) {
   assert.ok(err instanceof Error);
-  assert.ok(err.message.match(/Invalid file ".*?\/config\/invalid.txt": no parser found for extension "txt"/));
+  assert.ok(err.message.match(/Invalid file ".*?\/config\/invalid\.txt": no parser found for extension "txt"/));
 });
 
 // Basic loading
@@ -84,6 +90,33 @@ add_test_load('load with no extensions provided on multiple directories', ['form
     "json": true,
     "ini": "true",
     "js": true,
+  });
+});
+
+// Disable parsers
+add_test('disable parsers', function(callback) {
+  config.parser.disable('ini');
+  config.parser.disable('yml');
+  callback();
+}, [], function(err) {
+  assert.ifError(err);
+  assert.ok(!config.parser.enabled('yml'));
+});
+
+// Invalid parser (after disabling)
+add_test_load('disabled parser', ['format.yml'], function(err) {
+  assert.ok(err instanceof Error);
+  assert.ok(err.message.match(/Invalid file ".*?\/config\/format\.yml": no parser found for extension "yml"/));
+});
+
+// Re-check implicit extensions
+add_test_load('load with implicit extensions, after disabling some parsers', ['format', ['config', 'config/override']], function(err, config) {
+  assert.ifError(err);
+  assert.deepEqual(config, {
+    "format": "js",
+    "json": true,
+    "js": true,
+    // "yml" and "ini" keys have not been loaded
   });
 });
 
