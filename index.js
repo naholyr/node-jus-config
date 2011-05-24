@@ -13,6 +13,7 @@ const path = require('path')
 
 var parsers = {};
 var enabledParsers = [];
+var debug = false;
 
 
 // Internal API
@@ -43,7 +44,7 @@ function registerParser(extension, parser, enable) {
 
 function enableParser(extension) {
   if (isParserEnabled(extension)) {
-    if (exports.debug) util.debug('Parser for "' + extension + '" is already enabled');
+    if (debug) util.debug('Parser for "' + extension + '" is already enabled');
     return false;
   }
   if (isParserRegistered(extension)) {
@@ -56,7 +57,7 @@ function enableParser(extension) {
 
 function disableParser(extension) {
   if (!isParserEnabled(extension)) {
-    if (exports.debug) util.debug('Parser for "' + extension + '" is already disabled');
+    if (debug) util.debug('Parser for "' + extension + '" is already disabled');
     return false;
   }
   if (isParserRegistered(extension)) {
@@ -115,7 +116,7 @@ function parseString(string, extension, callback) {
 }
 
 function loadFile(file, config, callback) {
-  if (exports.debug) util.debug('Loading configuration file: ' + file);
+  if (debug) util.debug('Loading configuration file: ' + file);
   parseFile(file, function(err, conf) {
     if (!err) {
       try {
@@ -130,7 +131,7 @@ function loadFile(file, config, callback) {
 }
 
 function loadFiles(files, callback) {
-  if (exports.debug) util.debug('Loading configuration files: ' + files.join(', '));
+  if (debug) util.debug('Loading configuration files: ' + files.join(', '));
   function load(i, config) {
     if (i < files.length) {
       var file = files[i];
@@ -172,7 +173,7 @@ function loadFilesFromDirs(files, dirs, callback) {
   var allFiles = [];
   function addFile(file) {
     if (path.extname(file) == '') {
-      if (exports.debug) util.debug('No extension for ' + file + ', try all enabled parsers (first enabled = highest priority)');
+      if (debug) util.debug('No extension for ' + file + ', try all enabled parsers (first enabled = highest priority)');
       var guessedFiles = [];
       enabledParsers.forEach(function(knownExtension) {
         guessedFiles.unshift(file + '.' + knownExtension);
@@ -196,10 +197,10 @@ function loadFilesFromDirs(files, dirs, callback) {
   });
 
   // Exclude unexisting files
-  if (exports.debug) util.debug('Check configuration files: ' + allFiles.join(', '));
+  if (debug) util.debug('Check configuration files: ' + allFiles.join(', '));
   async.filter(allFiles, function(file, callback) {
     path.exists(file, function(exists) {
-      if (!exists && exports.debug) util.debug('File not found: ' + file);
+      if (!exists && debug) util.debug('File not found: ' + file);
       callback(exists);
     });
   }, function(files) {
@@ -236,7 +237,7 @@ merge(exports, {
     "parseString": parseString
   },
   "load": loadFilesFromDirs,
-  "debug": false
+  "debug": function(enabled) { debug = enabled }
 });
 
 
