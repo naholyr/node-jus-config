@@ -245,3 +245,4 @@ merge(exports, {
 if (module === require.main) {
   require('./test')
 }
+
