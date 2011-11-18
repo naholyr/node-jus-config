@@ -1,3 +1,5 @@
+[![Build Status](https://secure.travis-ci.org/naholyr/node-jus-config.png)](http://travis-ci.org/naholyr/node-jus-config)
+
 # jus-config
 
 Jus-Config is a Node.JS module that will help you manager your configuration files, supporting 
